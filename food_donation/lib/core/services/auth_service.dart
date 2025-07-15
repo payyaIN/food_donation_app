@@ -19,17 +19,20 @@ class AuthService extends GetxService {
   @override
   void onInit() {
     super.onInit();
+    print('AuthService.onInit called');
     _initializeAuth();
   }
 
   Future<void> _initializeAuth() async {
     try {
+      print('AuthService._initializeAuth called');
       await _loadUserFromStorage();
       _isInitialized.value = true;
-      print('Auth service initialized. Logged in: $_isLoggedIn');
+      print('Auth service initialized. Logged in: ${_isLoggedIn.value}');
     } catch (e) {
       print('Auth initialization error: $e');
       _isInitialized.value = true;
+      _isLoggedIn.value = false;
     }
   }
 
@@ -42,32 +45,76 @@ class AuthService extends GetxService {
       print('Stored user data: ${userData.isNotEmpty ? "exists" : "empty"}');
 
       if (token.isNotEmpty && userData.isNotEmpty) {
-        _currentUser.value = UserModel.fromJson(json.decode(userData));
-        _apiService.setToken(token);
-        _isLoggedIn.value = true;
-        print('User loaded from storage: ${_currentUser.value?.name}');
+        try {
+          final userMap = json.decode(userData);
+          _currentUser.value = UserModel.fromJson(userMap);
+          _apiService.setToken(token);
+
+          // Verify token is still valid by checking with server
+          await _verifyTokenValidity();
+        } catch (e) {
+          print('Error parsing stored user data: $e');
+          await _clearStoredData();
+        }
       } else {
         print('No stored user data found');
         _isLoggedIn.value = false;
       }
     } catch (e) {
       print('Error loading user from storage: $e');
-      await logout();
+      await _clearStoredData();
+    }
+  }
+
+  Future<void> _verifyTokenValidity() async {
+    try {
+      // Try to get current user from server to verify token
+      final response = await _apiService.get('/auth/me');
+
+      if (response['user'] != null) {
+        _currentUser.value = UserModel.fromJson(response['user']);
+        _isLoggedIn.value = true;
+        print('Token verified successfully: ${_currentUser.value?.name}');
+      } else {
+        await _clearStoredData();
+      }
+    } catch (e) {
+      print('Token verification failed: $e');
+      await _clearStoredData();
+    }
+  }
+
+  Future<void> _clearStoredData() async {
+    try {
+      _currentUser.value = null;
+      _isLoggedIn.value = false;
+      await _storageService.removeToken();
+      await _storageService.removeUserData();
+      _apiService.setToken('');
+      print('Stored data cleared');
+    } catch (e) {
+      print('Error clearing stored data: $e');
     }
   }
 
   Future<void> login(String email, String password) async {
     try {
+      print('AuthService.login called for: $email');
+
       final response = await _apiService.post('/auth/login', {
         'email': email,
         'password': password,
       });
 
-      final user = UserModel.fromJson(response['user']);
-      final token = response['token'];
+      if (response['user'] != null && response['token'] != null) {
+        final user = UserModel.fromJson(response['user']);
+        final token = response['token'];
 
-      await _saveUserData(user, token);
-      print('Login successful: ${user.name}');
+        await _saveUserData(user, token);
+        print('Login successful: ${user.name}');
+      } else {
+        throw Exception('Invalid response format');
+      }
     } catch (e) {
       print('Login error: $e');
       throw e;
@@ -76,13 +123,19 @@ class AuthService extends GetxService {
 
   Future<void> register(Map<String, dynamic> userData) async {
     try {
+      print('AuthService.register called for: ${userData['email']}');
+
       final response = await _apiService.post('/auth/register', userData);
 
-      final user = UserModel.fromJson(response['user']);
-      final token = response['token'];
+      if (response['user'] != null && response['token'] != null) {
+        final user = UserModel.fromJson(response['user']);
+        final token = response['token'];
 
-      await _saveUserData(user, token);
-      print('Registration successful: ${user.name}');
+        await _saveUserData(user, token);
+        print('Registration successful: ${user.name}');
+      } else {
+        throw Exception('Invalid response format');
+      }
     } catch (e) {
       print('Registration error: $e');
       throw e;
@@ -107,6 +160,8 @@ class AuthService extends GetxService {
 
   Future<void> logout() async {
     try {
+      print('AuthService.logout called');
+
       _currentUser.value = null;
       _isLoggedIn.value = false;
 
@@ -127,6 +182,21 @@ class AuthService extends GetxService {
       print('User updated successfully');
     } catch (e) {
       print('Error updating user: $e');
+    }
+  }
+
+  // Method to refresh user data from server
+  Future<void> refreshUserData() async {
+    try {
+      if (_isLoggedIn.value) {
+        final response = await _apiService.get('/auth/me');
+        if (response['user'] != null) {
+          final user = UserModel.fromJson(response['user']);
+          await updateUser(user);
+        }
+      }
+    } catch (e) {
+      print('Error refreshing user data: $e');
     }
   }
 }

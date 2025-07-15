@@ -5,6 +5,11 @@ import 'splash_viewmodel.dart';
 class SplashView extends GetView<SplashViewModel> {
   @override
   Widget build(BuildContext context) {
+    print('SplashView.build called');
+
+    // Ensure the controller is instantiated
+    Get.find<SplashViewModel>();
+
     return Scaffold(
       backgroundColor: Colors.green,
       body: Center(
@@ -38,13 +43,20 @@ class SplashView extends GetView<SplashViewModel> {
               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
             ),
             SizedBox(height: 20),
-            Text(
-              'Initializing...',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white70,
+            Obx(() => Text(
+                  controller.initializationStatus.value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white70,
+                  ),
+                )),
+            SizedBox(height: 20),
+            // Add a debug button to manually trigger navigation
+            if (Get.isDarkMode) // Only show in debug mode
+              ElevatedButton(
+                onPressed: () => controller.forceNavigation(),
+                child: Text('Force Navigation'),
               ),
-            ),
           ],
         ),
       ),

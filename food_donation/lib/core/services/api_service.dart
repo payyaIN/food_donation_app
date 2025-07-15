@@ -4,8 +4,12 @@ import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 
 class ApiService extends GetxService {
-  // Use 10.0.2.2 for Android emulator, localhost for iOS simulator
-  static const String baseUrl = 'http://192.168.0.19:3001/api';
+  // Updated base URL configurations for different environments
+  // For Android emulator: use 10.0.2.2
+  // For iOS simulator: use localhost
+  // For physical device: use your computer's IP address
+  static const String baseUrl =
+      'http://192.168.0.202:3001/api'; // Changed from 192.168.0.19
 
   final http.Client _client = http.Client();
   String _token = '';
@@ -28,14 +32,20 @@ class ApiService extends GetxService {
             Uri.parse('$baseUrl$endpoint'),
             headers: _headers,
           )
-          .timeout(Duration(seconds: 10));
+          .timeout(Duration(seconds: 15)); // Increased timeout
 
       print('GET response status: ${response.statusCode}');
       return _handleResponse(response);
-    } on SocketException {
-      throw Exception('No internet connection. Please check your network.');
-    } on HttpException {
+    } on SocketException catch (e) {
+      print('Socket error: $e');
+      throw Exception(
+          'Cannot connect to server. Please check if the backend is running on port 3001.');
+    } on HttpException catch (e) {
+      print('HTTP error: $e');
       throw Exception('Server error. Please try again later.');
+    } on FormatException catch (e) {
+      print('Format error: $e');
+      throw Exception('Invalid response format from server.');
     } catch (e) {
       print('GET request error: $e');
       throw Exception('Network error: $e');
@@ -54,14 +64,20 @@ class ApiService extends GetxService {
             headers: _headers,
             body: json.encode(data),
           )
-          .timeout(Duration(seconds: 10));
+          .timeout(Duration(seconds: 15)); // Increased timeout
 
       print('POST response status: ${response.statusCode}');
       return _handleResponse(response);
-    } on SocketException {
-      throw Exception('No internet connection. Please check your network.');
-    } on HttpException {
+    } on SocketException catch (e) {
+      print('Socket error: $e');
+      throw Exception(
+          'Cannot connect to server. Please check if the backend is running on port 3001.');
+    } on HttpException catch (e) {
+      print('HTTP error: $e');
       throw Exception('Server error. Please try again later.');
+    } on FormatException catch (e) {
+      print('Format error: $e');
+      throw Exception('Invalid response format from server.');
     } catch (e) {
       print('POST request error: $e');
       throw Exception('Network error: $e');
@@ -78,14 +94,20 @@ class ApiService extends GetxService {
             headers: _headers,
             body: json.encode(data),
           )
-          .timeout(Duration(seconds: 10));
+          .timeout(Duration(seconds: 15)); // Increased timeout
 
       print('PUT response status: ${response.statusCode}');
       return _handleResponse(response);
-    } on SocketException {
-      throw Exception('No internet connection. Please check your network.');
-    } on HttpException {
+    } on SocketException catch (e) {
+      print('Socket error: $e');
+      throw Exception(
+          'Cannot connect to server. Please check if the backend is running on port 3001.');
+    } on HttpException catch (e) {
+      print('HTTP error: $e');
       throw Exception('Server error. Please try again later.');
+    } on FormatException catch (e) {
+      print('Format error: $e');
+      throw Exception('Invalid response format from server.');
     } catch (e) {
       print('PUT request error: $e');
       throw Exception('Network error: $e');
@@ -100,14 +122,20 @@ class ApiService extends GetxService {
             Uri.parse('$baseUrl$endpoint'),
             headers: _headers,
           )
-          .timeout(Duration(seconds: 10));
+          .timeout(Duration(seconds: 15)); // Increased timeout
 
       print('DELETE response status: ${response.statusCode}');
       return _handleResponse(response);
-    } on SocketException {
-      throw Exception('No internet connection. Please check your network.');
-    } on HttpException {
+    } on SocketException catch (e) {
+      print('Socket error: $e');
+      throw Exception(
+          'Cannot connect to server. Please check if the backend is running on port 3001.');
+    } on HttpException catch (e) {
+      print('HTTP error: $e');
       throw Exception('Server error. Please try again later.');
+    } on FormatException catch (e) {
+      print('Format error: $e');
+      throw Exception('Invalid response format from server.');
     } catch (e) {
       print('DELETE request error: $e');
       throw Exception('Network error: $e');
@@ -116,8 +144,8 @@ class ApiService extends GetxService {
 
   Map<String, dynamic> _handleResponse(http.Response response) {
     try {
+      print('Response body: ${response.body}');
       final data = json.decode(response.body);
-      print('Response data: $data');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return data;
@@ -126,7 +154,18 @@ class ApiService extends GetxService {
       }
     } catch (e) {
       if (e is Exception) rethrow;
-      throw Exception('Failed to parse response');
+      throw Exception('Failed to parse response: ${response.body}');
+    }
+  }
+
+  // Health check method to test connection
+  Future<bool> checkConnection() async {
+    try {
+      await get('/health');
+      return true;
+    } catch (e) {
+      print('Connection check failed: $e');
+      return false;
     }
   }
 

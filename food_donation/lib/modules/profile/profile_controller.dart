@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:food_donation/data/services/api_service.dart';
+import 'package:food_donation/core/services/api_service.dart'; // FIXED: Changed from data/services
 import 'package:food_donation/data/models/user_model.dart';
 import 'package:food_donation/routes/app_routes.dart';
 

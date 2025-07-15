@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 
 class ApiService extends GetxService {
   // static const String baseUrl = 'http://localhost:3000/api';
-  static const String baseUrl = 'http://192.168.0.19:3001/api';
+  static const String baseUrl = 'http://192.168.0.202:3001/api';
 
   final http.Client _client = http.Client();
 
